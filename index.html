@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TODOs LIST</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.4.1/dist/css/bootstrap.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            overflow-x: hidden; /* Hide horizontal scrollbar */
+        }
+        #bg-video {
+            position: fixed; /* Fix the video to cover the viewport */
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: -1; /* Place video behind other content */
+            opacity: 0.6; /* Adjust opacity for a subtle effect */
+        }
+        .container {
+            position: relative; /* Enable relative positioning for child elements */
+            max-width: 800px;
+            margin: 80px auto; /* Adjust margin to center container */
+            padding: 20px;
+            background-color: rgba(255, 255, 255, 0.9); /* Semi-transparent white background */
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.2);
+            z-index: 1; /* Ensure container is above video */
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .table {
+            background-color: #fff;
+        }
+        .table th, .table td {
+            vertical-align: middle;
+        }
+        .edit-btn, .delete-btn {
+            transition: transform 0.2s ease-in-out;
+        }
+        .edit-btn:hover, .delete-btn:hover {
+            transform: scale(1.1);
+        }
+        .deadline-alert {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <video autoplay muted loop id="bg-video">
+        <source src="static/to.mp4" type="video/mp4">
+        Your browser does not support HTML5 video.
+    </video>
+
+<div class="container">
+    
+
+    <h1 class="text-center my-4">TODOs LIST</h1>
+
+    <div class="my-4">
+        <div class="form-group">
+            <label for="todoTitle">Title <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="todoTitle" aria-describedby="titleHelp" required>
+            <small id="titleHelp" class="form-text text-muted">Enter title for your todo...</small>
+        </div>
+        <div class="form-group">
+            <label for="todoDescription">Description <span class="text-danger">*</span></label>
+            <textarea class="form-control" id="todoDescription" required></textarea>
+            <small id="descriptionHelp" class="form-text text-muted">Enter description for your todo...</small>
+        </div>
+        
+        <div class="form-group">
+            <label for="todoDeadline">Deadline</label>
+            <input type="date" class="form-control" id="todoDeadline">
+            <small id="deadlineHelp" class="form-text text-muted">Enter deadline for your todo...</small>
+        </div>
+        
+        <button id="addItem" type="button" class="btn btn-primary">Add Item</button>
+        <button id="updateItem" type="button" class="btn btn-primary" style="display: none;">Update</button>
+        <button id="deleteAll" type="button" class="btn btn-danger ml-2">Delete All Todos</button>
+    </div>
+
+    <div class="my-4">
+        <h2>Your Items</h2>
+        <table class="table table-bordered">
+            <thead class="thead-dark">
+                <tr>
+                    <th scope="col">S No.</th>
+                    <th scope="col">Title</th>
+                    <th scope="col">Description</th>
+                    <th scope="col">Deadline</th>
+                    <th scope="col">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                <!-- Table rows will be populated here -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.4.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.4.1/dist/js/bootstrap.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const addItemButton = document.getElementById("addItem");
+        const updateItemButton = document.getElementById("updateItem");
+        const deleteAllButton = document.getElementById("deleteAll");
+        const tableBody = document.getElementById("tableBody");
+        let editIndex = -1; // Track the index of the todo being edited (-1 means not in edit mode)
+
+        addItemButton.addEventListener("click", () => {
+            const title = document.getElementById('todoTitle').value.trim();
+            const description = document.getElementById('todoDescription').value.trim();
+            const deadline = document.getElementById('todoDeadline').value;
+
+            // Check if title and description are not empty
+            if (title === '' || description === '') {
+                alert('Please enter both title and description for your todo.');
+                return; // Stop execution if either field is empty
+            }
+
+            // Proceed to add item to the list
+            let itemJsonArray = JSON.parse(localStorage.getItem('itemsJson') || '[]');
+            itemJsonArray.push([title, description, deadline]);
+            localStorage.setItem('itemsJson', JSON.stringify(itemJsonArray));
+
+            // Clear input fields after adding new todo
+            document.getElementById('todoTitle').value = '';
+            document.getElementById('todoDescription').value = '';
+            document.getElementById('todoDeadline').value = '';
+
+            // Populate table with updated data
+            populateTable();
+        });
+
+        updateItemButton.addEventListener("click", () => {
+            const title = document.getElementById('todoTitle').value.trim();
+            const description = document.getElementById('todoDescription').value.trim();
+            const deadline = document.getElementById('todoDeadline').value;
+
+            // Check if title and description are not empty
+            if (title === '' || description === '') {
+                alert('Please enter both title and description for your todo.');
+                return; // Stop execution if either field is empty
+            }
+
+            let itemJsonArray = JSON.parse(localStorage.getItem('itemsJson') || '[]');
+            itemJsonArray[editIndex] = [title, description, deadline];
+            localStorage.setItem('itemsJson', JSON.stringify(itemJsonArray));
+
+            // Clear input fields after updating todo
+            document.getElementById('todoTitle').value = '';
+            document.getElementById('todoDescription').value = '';
+            document.getElementById('todoDeadline').value = '';
+
+            // Reset edit mode
+            editIndex = -1;
+            addItemButton.style.display = 'inline-block';
+            updateItemButton.style.display = 'none';
+
+            // Populate table with updated data
+            populateTable();
+        });
+
+        deleteAllButton.addEventListener("click", () => {
+            if (confirm("Are you sure you want to delete all todos? This action cannot be undone.")) {
+                localStorage.removeItem('itemsJson');
+                // Clear table body
+                tableBody.innerHTML = '';
+            }
+        });
+
+        function populateTable() {
+            let itemJsonArray = JSON.parse(localStorage.getItem('itemsJson') || '[]');
+            let str = "";
+
+            itemJsonArray.forEach((element, index) => {
+                const [title, description, deadline] = element;
+                str += `
+                    <tr>
+                        <th scope="row">${index + 1}</th>
+                        <td>${title}</td>
+                        <td>${description}</td>
+                        <td>${deadline}</td>
+                        <td>
+                            <button class="btn btn-sm btn-primary delete-btn" data-index="${index}">Delete</button>
+                            <button class="btn btn-sm btn-secondary edit-btn" data-index="${index}">Edit</button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tableBody.innerHTML = str;
+
+            // Attach event listeners to handle delete and edit button clicks
+            tableBody.querySelectorAll('.delete-btn').forEach(button => {
+                button.addEventListener('click', (event) => {
+                    const index = event.target.getAttribute('data-index');
+                    deleteItem(index);
+                });
+            });
+
+            tableBody.querySelectorAll('.edit-btn').forEach(button => {
+                button.addEventListener('click', (event) => {
+                    const index = event.target.getAttribute('data-index');
+                    editIndex = index; // Enter edit mode
+                    const [title, description, deadline] = itemJsonArray[index];
+                    document.getElementById('todoTitle').value = title;
+                    document.getElementById('todoDescription').value = description;
+                    document.getElementById('todoDeadline').value = deadline;
+                    addItemButton.style.display = 'none';
+                    updateItemButton.style.display = 'inline-block'; // Show update button
+                });
+            });
+
+            // Check deadlines and show alerts if necessary
+            checkDeadlines(itemJsonArray);
+        }
+
+        // Initial population of table on page load
+        populateTable();
+
+        function deleteItem(index) {
+            let itemJsonArray = JSON.parse(localStorage.getItem('itemsJson') || '[]');
+            
+            // Remove the item at the specified index
+            itemJsonArray.splice(index, 1);
+
+            // Update localStorage with the modified array
+            localStorage.setItem('itemsJson', JSON.stringify(itemJsonArray));
+
+            // Repopulate table after deletion
+            populateTable();
+        }
+
+        function checkDeadlines(itemJsonArray) {
+            const currentDate = new Date().toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
+
+            itemJsonArray.forEach((element) => {
+                const [, , deadline] = element;
+                if (deadline && deadline < currentDate) {
+                    alert(`The deadline for '${element[0]}' has passed!`);
+                } else if (deadline && deadline === currentDate) {
+                    alert(`Today is the deadline for '${element[0]}'.`);
+                }
+            });
+        }
+    });
+</script>
+
+</body>
+</html>
